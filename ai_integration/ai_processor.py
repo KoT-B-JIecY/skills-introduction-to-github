@@ -231,6 +231,109 @@ class GigaChatProvider(AIProvider):
             return "Общие новости"
 
 
+class DeepSeekProvider(AIProvider):
+    """Провайдер DeepSeek (основной)"""
+    
+    def __init__(self):
+        """Инициализация провайдера DeepSeek"""
+        self.client = None
+        if settings.DEEPSEEK_API_KEY and settings.DEEPSEEK_API_KEY != "":
+            try:
+                self.client = openai.OpenAI(
+                    api_key=settings.DEEPSEEK_API_KEY,
+                    base_url="https://api.deepseek.com"
+                )
+                logger.info("DeepSeek провайдер инициализирован")
+            except Exception as e:
+                logger.error(f"Ошибка инициализации DeepSeek: {e}")
+    
+    def is_available(self) -> bool:
+        """Проверка доступности DeepSeek"""
+        return self.client is not None
+    
+    def process_news(self, title: str, content: str, source: str) -> Dict[str, Any]:
+        """Обработка новости с помощью DeepSeek"""
+        if not self.is_available():
+            raise Exception("DeepSeek провайдер недоступен")
+        
+        try:
+            prompt = AIPrompts.NEWS_PROCESSING.format(
+                title=title,
+                content=content,
+                source=source
+            )
+            
+            start_time = time.time()
+            
+            response = self.client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                max_tokens=800,
+                temperature=0.7
+            )
+            
+            processing_time = time.time() - start_time
+            
+            response_text = response.choices[0].message.content
+            result = json.loads(response_text)
+            
+            result.update({
+                "processing_time": processing_time,
+                "tokens_used": response.usage.total_tokens,
+                "provider": "deepseek"
+            })
+            
+            logger.info(f"DeepSeek обработал новость за {processing_time:.2f}s")
+            return result
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Ошибка парсинга JSON ответа DeepSeek: {e}")
+            raise Exception(f"Ошибка парсинга ответа: {e}")
+        except Exception as e:
+            logger.error(f"Ошибка обработки новости DeepSeek: {e}")
+            raise
+    
+    def categorize_news(self, text: str) -> str:
+        """Определение категории новости с помощью DeepSeek"""
+        if not self.is_available():
+            raise Exception("DeepSeek провайдер недоступен")
+        
+        try:
+            categories = list(settings.CATEGORIES.keys())
+            prompt = AIPrompts.CATEGORIZATION.format(
+                categories=", ".join(categories),
+                text=text
+            )
+            
+            response = self.client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                max_tokens=50,
+                temperature=0.3
+            )
+            
+            category = response.choices[0].message.content.strip()
+            
+            if category in settings.CATEGORIES:
+                return category
+            else:
+                return "Общие новости"
+                
+        except Exception as e:
+            logger.error(f"Ошибка категоризации DeepSeek: {e}")
+            return "Общие новости"
+
+
 class OpenAIProvider(AIProvider):
     """Провайдер OpenAI (резервный)"""
     
@@ -337,13 +440,14 @@ class AIManager:
     def __init__(self):
         """Инициализация менеджера ИИ"""
         self.providers = {
+            "deepseek": DeepSeekProvider(),
             "claude": ClaudeProvider(),
             "gigachat": GigaChatProvider(),
             "openai": OpenAIProvider()
         }
         
-        # Определяем порядок приоритета провайдеров
-        self.priority_order = ["claude", "gigachat", "openai"]
+        # Определяем порядок приоритета провайдеров (DeepSeek первый!)
+        self.priority_order = ["deepseek", "claude", "gigachat", "openai"]
         
         # Находим доступные провайдеры
         self.available_providers = [

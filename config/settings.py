@@ -10,27 +10,30 @@ class Settings(BaseSettings):
     """
     
     # ========== ТЕЛЕГРАМ НАСТРОЙКИ ==========
-    # ОБЯЗАТЕЛЬНО: Получите токен у @BotFather в Telegram
-    TELEGRAM_BOT_TOKEN: str = "YOUR_BOT_TOKEN_HERE"
+    # Ваш токен бота (готов к работе)
+    TELEGRAM_BOT_TOKEN: str = "7824209469:AAGb-Q0GZVfD4hzzpOiSowbpId4ycBzJqIg"
     
-    # ОБЯЗАТЕЛЬНО: ID вашего телеграм канала (начинается с @ или -100)
-    TELEGRAM_CHANNEL_ID: str = "@your_channel_name"
+    # ID вашего телеграм канала
+    TELEGRAM_CHANNEL_ID: str = "-1002565440601"
     
-    # ОБЯЗАТЕЛЬНО: Ваш Telegram ID (получите у @userinfobot)
-    ADMIN_USER_ID: int = 0  # Замените на ваш ID
+    # Ваш Telegram ID (администратор)
+    ADMIN_USER_ID: int = 8039301345
     
     # Дополнительные админы (ID пользователей)
     ADMIN_IDS: List[int] = []
     
     # ========== ИИ ИНТЕГРАЦИЯ ==========
-    # ОБЯЗАТЕЛЬНО: API ключ Claude (Anthropic)
-    CLAUDE_API_KEY: str = "your_claude_api_key_here"
+    # DeepSeek API ключ (готов к работе!)
+    DEEPSEEK_API_KEY: str = "sk-825e603c75e444f6b2e73b806d26fd8c"
     
-    # ОБЯЗАТЕЛЬНО: API ключ GigaChat (если используете)
-    GIGACHAT_CLIENT_ID: str = "your_gigachat_client_id"
-    GIGACHAT_CLIENT_SECRET: str = "your_gigachat_client_secret"
+    # Claude API ключ (опционально)
+    CLAUDE_API_KEY: str = ""
     
-    # Опционально: OpenAI API ключ
+    # GigaChat (опционально)
+    GIGACHAT_CLIENT_ID: str = ""
+    GIGACHAT_CLIENT_SECRET: str = ""
+    
+    # OpenAI API ключ (опционально)
     OPENAI_API_KEY: str = ""
     
     # ========== БАЗА ДАННЫХ ==========
@@ -38,26 +41,42 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///news_bot.db"
     
     # ========== ПАРСИНГ НАСТРОЙКИ ==========
-    # Список сайтов для парсинга (добавьте свои)
+    # Готовые источники новостей (работают сразу!)
     NEWS_SOURCES: List[Dict[str, Any]] = [
         {
-            "name": "Пример RSS",
+            "name": "Лента.ру",
             "url": "https://lenta.ru/rss",
             "type": "rss",
             "enabled": True,
             "category": "Общие новости"
         },
         {
-            "name": "Пример HTML парсинг",
-            "url": "https://example-news-site.com",
-            "type": "html",
-            "enabled": False,
-            "category": "Технологии",
-            "selectors": {
-                "title": "h1.title",
-                "content": ".article-content",
-                "link": "a.article-link"
-            }
+            "name": "РБК",
+            "url": "https://rbc.ru/rss/news",
+            "type": "rss",
+            "enabled": True,
+            "category": "Экономика"
+        },
+        {
+            "name": "Ведомости",
+            "url": "https://www.vedomosti.ru/rss/news",
+            "type": "rss",
+            "enabled": True,
+            "category": "Экономика"
+        },
+        {
+            "name": "RT Russian",
+            "url": "https://russian.rt.com/rss",
+            "type": "rss",
+            "enabled": True,
+            "category": "Мир"
+        },
+        {
+            "name": "Газета.ru",
+            "url": "https://www.gazeta.ru/export/rss/lenta.xml",
+            "type": "rss",
+            "enabled": True,
+            "category": "Общие новости"
         }
     ]
     

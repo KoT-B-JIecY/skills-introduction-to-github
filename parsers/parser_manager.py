@@ -207,8 +207,16 @@ class NewsProcessor:
                 
                 # Если включена автопубликация, публикуем
                 if settings.AUTO_PUBLISH:
-                    news.status = NewsStatus.PUBLISHED.value
-                    news.published_at = datetime.utcnow()
+                    try:
+                        from bot.telegram_bot import publish_news_sync
+                        success = publish_news_sync(news.id)
+                        if success:
+                            logger.info(f"Новость {news.id} автоматически опубликована")
+                        else:
+                            logger.error(f"Ошибка автопубликации новости {news.id}")
+                    except ImportError:
+                        logger.warning("Telegram издатель не доступен для автопубликации")
+                        news.status = NewsStatus.PROCESSED.value
             else:
                 news.ai_processing_attempts += 1
                 news.ai_processing_error = "Ошибка обработки ИИ"
