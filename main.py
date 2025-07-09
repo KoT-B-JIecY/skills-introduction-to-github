@@ -349,10 +349,20 @@ def main():
                 
                 # Тестируем ИИ провайдеры
                 print("\n🤖 Тестируем ИИ провайдеры...")
-                for provider_name in ["claude", "gigachat", "openai"]:
+                for provider_name in ["deepseek", "claude", "gigachat", "openai"]:
                     success, message = ai_manager.test_provider(provider_name)
                     status = "✅" if success else "❌"
                     print(f"{status} {provider_name}: {message}")
+                
+                # Тестируем Telegram
+                print("\n📱 Тестируем Telegram подключение...")
+                try:
+                    from bot.telegram_bot import test_telegram_connection
+                    telegram_ok = test_telegram_connection()
+                    status = "✅" if telegram_ok else "❌"
+                    print(f"{status} Telegram: {'Подключение успешно' if telegram_ok else 'Ошибка подключения'}")
+                except ImportError:
+                    print("❌ Telegram: Модуль не найден")
                 
                 print("\n✅ Тестирование завершено")
                 

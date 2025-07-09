@@ -1,6 +1,5 @@
 # Телеграм бот
 python-telegram-bot==20.7
-aiogram==3.3.0
 
 # Веб-парсинг
 requests==2.31.0
