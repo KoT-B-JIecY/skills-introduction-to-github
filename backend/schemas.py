@@ -17,6 +17,17 @@ class ProductBase(BaseModel):
     price_usd: float
 
 
+class ProductCreate(ProductBase):
+    is_active: bool = True
+
+
+class ProductUpdate(BaseModel):
+    title: str | None = None
+    uc_amount: int | None = None
+    price_usd: float | None = None
+    is_active: bool | None = None
+
+
 class ProductRead(ProductBase):
     id: int
     is_active: bool
@@ -47,3 +58,12 @@ class OrderRead(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+# ---------------------------------------------------------------------------
+# Order update (admin)
+# ---------------------------------------------------------------------------
+
+
+class OrderUpdate(BaseModel):
+    status: str | None = None

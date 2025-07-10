@@ -38,10 +38,14 @@ def _ensure_default_products() -> None:
 from backend.routers.products import router as products_router
 from backend.routers.orders import router as orders_router
 from backend.routers.crypto_payments import router as crypto_router
+from backend.routers.admin_products import router as admin_products_router
+from backend.routers.admin_orders import router as admin_orders_router
 
 app.include_router(products_router)
 app.include_router(orders_router)
 app.include_router(crypto_router)
+app.include_router(admin_products_router)
+app.include_router(admin_orders_router)
 
 
 @app.get("/ping")
