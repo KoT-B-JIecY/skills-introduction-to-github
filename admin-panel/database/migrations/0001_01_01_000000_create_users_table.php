@@ -15,6 +15,11 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
+            $table->string('telegram_id')->unique()->nullable()->comment('Telegram user ID');
+            $table->string('username')->nullable()->comment('Telegram username');
+            $table->string('2fa_secret')->nullable()->comment('Two-factor authentication secret');
+            $table->string('role')->default('user')->comment('User role: user, admin');
+            $table->json('audit_log')->nullable()->comment('Admin actions log');
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
