@@ -2,6 +2,10 @@ from aiogram import Router, F, types
 from aiogram.filters import CommandStart
 from bot.keyboards.menu import main_menu
 from bot.keyboards.buy_uc import buy_uc_keyboard
+from bot.keyboards.cart import cart_keyboard
+
+from bot import cart as cart_store
+from bot import backend_api
 
 router = Router()
 
@@ -46,14 +50,69 @@ async def process_menu(callback: types.CallbackQuery):
 
 @router.callback_query(F.data.startswith("buy_uc:"))
 async def process_buy_uc(callback: types.CallbackQuery):
-    """Handle UC amount selection."""
+    """Handle UC amount selection -> add to cart."""
     amount_str = callback.data.split(":", 1)[1]
     try:
-        amount = int(amount_str)
+        uc_amount = int(amount_str)
     except ValueError:
         await callback.answer("Invalid amount", show_alert=True)
         return
 
-    await callback.answer(f"You selected {amount} UC", show_alert=True)
+    # Fetch products from backend and find matching UC amount
+    products = await backend_api.fetch_products()
+    product = next((p for p in products if p["uc_amount"] == uc_amount), None)
+    if not product:
+        await callback.answer("Product not found", show_alert=True)
+        return
 
-    # TODO: Add to cart or proceed to checkout in future steps
+    cart_store.set_cart(
+        callback.from_user.id,
+        cart_store.CartItem(
+            product_id=product["id"],
+            uc_amount=uc_amount,
+            price_usd=float(product["price_usd"]),
+        ),
+    )
+
+    text = (
+        f"🛒 Cart:\n\n<code>{uc_amount} UC</code> — ${product['price_usd']}\n\n"
+        "Press ✅ Checkout to place your order."
+    )
+    await callback.message.edit_text(text, reply_markup=cart_keyboard())
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("cart:"))
+async def process_cart(callback: types.CallbackQuery):
+    """Handle cart actions checkout/cancel."""
+    action = callback.data.split(":", 1)[1]
+    user_id = callback.from_user.id
+    cart_item = cart_store.get_cart(user_id)
+
+    if not cart_item:
+        await callback.answer("Cart is empty", show_alert=True)
+        return
+
+    if action == "cancel":
+        cart_store.clear_cart(user_id)
+        await callback.message.edit_text("Cart cleared.", reply_markup=buy_uc_keyboard())
+        await callback.answer("Cancelled")
+        return
+
+    if action == "checkout":
+        # Call backend to create order
+        try:
+            order = await backend_api.create_order(
+                tg_id=user_id, product_id=cart_item.product_id, qty=cart_item.qty
+            )
+        except Exception as exc:
+            await callback.answer(f"Error: {exc}", show_alert=True)
+            return
+
+        cart_store.clear_cart(user_id)
+
+        await callback.message.edit_text(
+            f"✅ Order #{order['id']} created!\nStatus: {order['status']}",
+            reply_markup=main_menu(),
+        )
+        await callback.answer("Order placed!")
