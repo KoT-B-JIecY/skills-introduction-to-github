@@ -67,3 +67,32 @@ class OrderRead(BaseModel):
 
 class OrderUpdate(BaseModel):
     status: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Promocode schemas
+# ---------------------------------------------------------------------------
+
+
+class PromocodeCreate(BaseModel):
+    code: str
+    discount_pct: int = Field(..., ge=1, le=100)
+    max_uses: int = 0
+    expires_at: datetime | None = None
+
+
+class PromocodeRead(BaseModel):
+    id: int
+    code: str
+    discount_pct: int
+    max_uses: int
+    used_times: int
+    expires_at: datetime | None
+
+    class Config:
+        orm_mode = True
+
+
+class PromocodeRedeem(BaseModel):
+    tg_id: int
+    code: str

@@ -51,3 +51,21 @@ async def create_crypto_invoice(order_id: int, currency: str = "USDT") -> Dict[s
     resp = await client.post(f"/crypto/invoice/{order_id}?currency={currency}")
     resp.raise_for_status()
     return resp.json()
+
+# ---------------------------------------------------------------------------
+# Promo & Referral
+# ---------------------------------------------------------------------------
+
+
+async def redeem_promo(tg_id: int, code: str):
+    client = await get_client()
+    resp = await client.post("/promo/redeem", json={"tg_id": tg_id, "code": code})
+    resp.raise_for_status()
+    return resp.json()
+
+
+async def link_referral(inviter_code: str, tg_id: int):
+    client = await get_client()
+    resp = await client.post(f"/referrals/link/{inviter_code}/{tg_id}")
+    resp.raise_for_status()
+    return resp.json()

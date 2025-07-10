@@ -6,14 +6,28 @@ from bot.keyboards.cart import cart_keyboard
 
 from bot import cart as cart_store
 from bot import backend_api
+from bot.i18n import t
 
 router = Router()
 
 
 @router.message(CommandStart())
 async def cmd_start(message: types.Message):
-    """Send main menu on /start."""
-    await message.answer("Welcome! Choose an option:", reply_markup=main_menu())
+    """Send main menu on /start. Support referral deep link."""
+    lang = message.from_user.language_code or "en"
+
+    # deep-link payload
+    if message.text and " " in message.text:
+        payload = message.text.split(" ", 1)[1]
+        if payload.startswith("ref_"):
+            code = payload.replace("ref_", "", 1)
+            await backend_api.link_referral(code, message.from_user.id)
+        elif payload.startswith("promo_"):
+            promo = payload.replace("promo_", "", 1)
+            # attempt redeem
+            await backend_api.redeem_promo(message.from_user.id, promo)
+
+    await message.answer(t("welcome", lang), reply_markup=main_menu())
 
 
 @router.callback_query(F.data.startswith("menu:"))
@@ -23,7 +37,7 @@ async def process_menu(callback: types.CallbackQuery):
 
     if action == "buy_uc":
         await callback.message.edit_text(
-            "Select UC amount:", reply_markup=buy_uc_keyboard()
+            t("select_uc", callback.from_user.language_code), reply_markup=buy_uc_keyboard()
         )
     elif action == "prices":
         await callback.message.edit_text(
@@ -74,9 +88,8 @@ async def process_buy_uc(callback: types.CallbackQuery):
         ),
     )
 
-    text = (
-        f"🛒 Cart:\n\n<code>{uc_amount} UC</code> — ${product['price_usd']}\n\n"
-        "Press ✅ Checkout to place your order."
+    text = t("cart_header", callback.from_user.language_code).format(
+        item=f"<code>{uc_amount} UC</code>", price=product["price_usd"],
     )
     await callback.message.edit_text(text, reply_markup=cart_keyboard())
     await callback.answer()
@@ -118,12 +131,43 @@ async def process_cart(callback: types.CallbackQuery):
 
         cart_store.clear_cart(user_id)
 
+        lang = callback.from_user.language_code
         payment_text = (
-            f"✅ Order #{order['id']} created!\n\n"
-            f"Send <b>{invoice['amount']} {invoice['currency']}</b> to the address below:\n"
-            f"<code>{invoice['address']}</code>\n\n"
-            "Once the transaction is confirmed, delivery will follow automatically."
+            t("order_created", lang).format(id=order["id"]) + "\n\n" +
+            t("pay_instruction", lang).format(
+                amount=invoice["amount"],
+                currency=invoice["currency"],
+                address=invoice["address"],
+            )
         )
 
         await callback.message.edit_text(payment_text, reply_markup=main_menu())
         await callback.answer("Payment invoice generated")
+
+
+@router.message(commands={"promo"})
+async def cmd_promo(message: types.Message):
+    parts = message.text.strip().split(maxsplit=1)
+    if len(parts) != 2:
+        await message.answer("Usage: /promo CODE")
+        return
+    code = parts[1]
+    try:
+        resp = await backend_api.redeem_promo(message.from_user.id, code)
+        await message.answer(f"Promo redeemed! Balance: ${resp['balance']}")
+    except Exception:
+        await message.answer(t("invalid_promo", message.from_user.language_code), show_alert=True)
+
+
+# Language command
+
+
+@router.message(commands={"lang"})
+async def cmd_lang(message: types.Message):
+    parts = message.text.split(maxsplit=1)
+    if len(parts) != 2:
+        await message.answer("Usage: /lang en|ru")
+        return
+    lang = parts[1]
+    # No persistence in db for now
+    await message.answer("Language set!")

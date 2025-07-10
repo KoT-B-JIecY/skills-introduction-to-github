@@ -3,6 +3,7 @@
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from backend import models
 
@@ -96,3 +97,71 @@ def set_payment_status(db: Session, payment: models.Payment, status: models.Paym
         order = payment.order
         order.status = models.OrderStatus.PAID
         db.add(order)
+
+# ---------------------------------------------------------------------------
+# Promocodes
+# ---------------------------------------------------------------------------
+
+
+def create_promocode(db: Session, code: str, discount_pct: int, max_uses: int = 0, expires_at=None) -> models.Promocode:
+    promo = models.Promocode(
+        code=code.upper(),
+        discount_pct=discount_pct,
+        max_uses=max_uses,
+        expires_at=expires_at,
+    )
+    db.add(promo)
+    db.flush()
+    return promo
+
+
+def redeem_promocode(db: Session, user: models.User, code: str) -> models.Promocode:
+    promo = (
+        db.query(models.Promocode)
+        .filter(models.Promocode.code == code.upper())
+        .first()
+    )
+    if not promo:
+        raise ValueError("Promo not found")
+    if promo.expires_at and promo.expires_at < func.now():
+        raise ValueError("Promo expired")
+    if promo.max_uses > 0 and promo.used_times >= promo.max_uses:
+        raise ValueError("Promo fully used")
+
+    promo.used_times += 1
+    user.balance += promo.discount_pct  # simplistic: just store as balance credit
+
+    db.add_all([promo, user])
+    return promo
+
+
+# ---------------------------------------------------------------------------
+# Referrals
+# ---------------------------------------------------------------------------
+
+
+def add_referral(db: Session, inviter_code: str, invited_tg_id: int) -> models.Referral:
+    inviter = db.query(models.User).filter(models.User.referral_code == inviter_code).first()
+    if not inviter:
+        raise ValueError("Inviter not found")
+
+    invited = get_user_by_tg(db, invited_tg_id)
+    if not invited:
+        invited = create_user(db, invited_tg_id)
+
+    # prevent self referral or duplicates
+    if invited.id == inviter.id:
+        raise ValueError("Cannot refer yourself")
+    existing = (
+        db.query(models.Referral)
+        .filter(models.Referral.inviter_id == inviter.id, models.Referral.invited_id == invited.id)
+        .first()
+    )
+    if existing:
+        return existing
+
+    ref = models.Referral(inviter_id=inviter.id, invited_id=invited.id, bonus=0)
+    db.add(ref)
+    inviter.balance += 1  # bonus point for inviter
+    db.add(inviter)
+    return ref

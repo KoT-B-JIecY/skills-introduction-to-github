@@ -1,0 +1,13 @@
+{
+  "welcome": "Welcome! Choose an option:",
+  "menu_buy_uc": "🛒 Buy UC",
+  "menu_prices": "💲 Prices",
+  "menu_support": "📞 Support",
+  "menu_profile": "👤 Profile",
+  "menu_promotions": "🎁 Promotions",
+  "select_uc": "Select UC amount:",
+  "cart_header": "🛒 Cart:\n\n{item} — ${price}\n\nPress ✅ Checkout to place your order.",
+  "order_created": "✅ Order #{id} created!",
+  "pay_instruction": "Send <b>{amount} {currency}</b> to the address below:\n<code>{address}</code>\n\nOnce the transaction is confirmed, delivery will follow automatically.",
+  "invalid_promo": "Invalid promocode"
+}
