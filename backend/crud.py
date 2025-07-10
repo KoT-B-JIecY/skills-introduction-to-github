@@ -59,3 +59,40 @@ def create_order(db: Session, tg_id: int, product: models.Product, qty: int = 1)
     db.add(order)
     db.flush()
     return order
+
+# ---------------------------------------------------------------------------
+# Payments
+# ---------------------------------------------------------------------------
+
+
+def create_payment(
+    db: Session,
+    order: models.Order,
+    provider: str,
+    amount: float,
+    currency: str,
+    meta: dict,
+) -> models.Payment:
+    payment = models.Payment(
+        order_id=order.id,
+        user_id=order.user_id,
+        provider=provider,
+        amount=amount,
+        currency=currency,
+        meta_json=meta,
+    )
+    db.add(payment)
+    db.flush()
+    return payment
+
+
+def set_payment_status(db: Session, payment: models.Payment, status: models.PaymentStatus, tx_hash: str | None = None):
+    payment.status = status
+    payment.meta_json = {**(payment.meta_json or {}), "tx_hash": tx_hash}
+    db.add(payment)
+
+    if status == models.PaymentStatus.CONFIRMED:
+        # update order status if all payments confirmed
+        order = payment.order
+        order.status = models.OrderStatus.PAID
+        db.add(order)

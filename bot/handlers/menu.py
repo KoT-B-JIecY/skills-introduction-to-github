@@ -109,10 +109,21 @@ async def process_cart(callback: types.CallbackQuery):
             await callback.answer(f"Error: {exc}", show_alert=True)
             return
 
+        # Generate crypto invoice (USDT as default)
+        try:
+            invoice = await backend_api.create_crypto_invoice(order_id=order["id"], currency="USDT")
+        except Exception as exc:
+            await callback.answer(f"Order created but payment failed: {exc}", show_alert=True)
+            return
+
         cart_store.clear_cart(user_id)
 
-        await callback.message.edit_text(
-            f"✅ Order #{order['id']} created!\nStatus: {order['status']}",
-            reply_markup=main_menu(),
+        payment_text = (
+            f"✅ Order #{order['id']} created!\n\n"
+            f"Send <b>{invoice['amount']} {invoice['currency']}</b> to the address below:\n"
+            f"<code>{invoice['address']}</code>\n\n"
+            "Once the transaction is confirmed, delivery will follow automatically."
         )
-        await callback.answer("Order placed!")
+
+        await callback.message.edit_text(payment_text, reply_markup=main_menu())
+        await callback.answer("Payment invoice generated")

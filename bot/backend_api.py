@@ -39,3 +39,15 @@ async def create_order(tg_id: int, product_id: int, qty: int = 1) -> Dict[str, A
     )
     resp.raise_for_status()
     return resp.json()
+
+
+# ---------------------------------------------------------------------------
+# Crypto payments
+# ---------------------------------------------------------------------------
+
+
+async def create_crypto_invoice(order_id: int, currency: str = "USDT") -> Dict[str, Any]:
+    client = await get_client()
+    resp = await client.post(f"/crypto/invoice/{order_id}?currency={currency}")
+    resp.raise_for_status()
+    return resp.json()
