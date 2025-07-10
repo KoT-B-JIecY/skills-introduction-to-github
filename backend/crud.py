@@ -49,6 +49,19 @@ def create_order(db: Session, tg_id: int, product: models.Product, qty: int = 1)
     if not user:
         user = create_user(db, tg_id)
 
+    # Anti-fraud: block if more than 5 pending orders in last hour
+    from datetime import datetime, timedelta
+    one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+    recent = (
+        db.query(models.Order)
+        .filter(models.Order.user_id == user.id, models.Order.created_at >= one_hour_ago)
+        .count()
+    )
+    if recent >= 5:
+        user.is_blocked = True
+        db.add(user)
+        raise ValueError("User blocked for suspicious activity")
+
     amount = float(product.price_usd) * qty
 
     order = models.Order(
@@ -97,6 +110,24 @@ def set_payment_status(db: Session, payment: models.Payment, status: models.Paym
         order = payment.order
         order.status = models.OrderStatus.PAID
         db.add(order)
+
+        # Loyalty points: 1 point per $1 spent
+        user = order.user
+        user.loyalty_points += int(float(order.amount))
+        db.add(user)
+
+        # Try auto UC delivery
+        from backend.integrations.pubg import deliver_uc
+        import asyncio
+
+        async def _deliver():
+            code = await deliver_uc(user.tg_id, order.product.uc_amount)
+            order.status = models.OrderStatus.DELIVERED
+            order.tx_hash = code  # reuse tx_hash for delivery code
+            from backend.utils.notifications import notify_admin
+            await notify_admin(f"🎉 Order #{order.id} delivered. Code: {code}")
+
+        asyncio.create_task(_deliver())
 
 # ---------------------------------------------------------------------------
 # Promocodes

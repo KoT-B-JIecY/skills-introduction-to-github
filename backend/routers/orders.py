@@ -19,7 +19,11 @@ def create_order(order_in: OrderCreate, db: Session = Depends(get_db)):
     if not product or not product.is_active:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    order = crud.create_order(db, tg_id=order_in.tg_id, product=product, qty=order_in.qty)
+    try:
+        order = crud.create_order(db, tg_id=order_in.tg_id, product=product, qty=order_in.qty)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
     db.commit()
     db.refresh(order)
 
