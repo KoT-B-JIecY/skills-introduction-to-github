@@ -19,6 +19,14 @@ RUN a2enmod rewrite
 
 # Copy application from builder stage
 COPY --from=builder /var/www/html/laravel-app /var/www/html
+# Copy custom source (Livewire components etc.) from build context
+COPY src/ /var/www/html
+
+# Install dependencies and optimize autoloader
+RUN composer install --no-interaction --no-dev --optimize-autoloader
+
+# Append admin routes include
+RUN bash -c "echo '\nrequire __DIR__/routes/admin.php;' >> /var/www/html/routes/web.php"
 
 # Set correct document root
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
