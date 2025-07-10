@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from backend.schemas import OrderCreate, OrderRead
 from backend import crud, models
 from backend.db import get_db
+from backend.utils.notifications import notify_admin
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -19,4 +20,15 @@ def create_order(order_in: OrderCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Product not found")
 
     order = crud.create_order(db, tg_id=order_in.tg_id, product=product, qty=order_in.qty)
+    db.commit()
+    db.refresh(order)
+
+    import asyncio
+
+    asyncio.create_task(
+        notify_admin(
+            f"🆕 New Order #{order.id}\nUser: {order.user_id}\nProduct: {product.title} x{order.qty}\nAmount: ${order.amount}"
+        )
+    )
+
     return order

@@ -42,6 +42,8 @@ from backend.routers.admin_products import router as admin_products_router
 from backend.routers.admin_orders import router as admin_orders_router
 from backend.routers.promocodes import router as promo_router
 from backend.routers.referrals import router as referral_router
+from backend.routers.tournaments import router as tournament_router
+from backend.routers.stats import router as stats_router
 
 app.include_router(products_router)
 app.include_router(orders_router)
@@ -50,6 +52,8 @@ app.include_router(admin_products_router)
 app.include_router(admin_orders_router)
 app.include_router(promo_router)
 app.include_router(referral_router)
+app.include_router(tournament_router)
+app.include_router(stats_router)
 
 
 @app.get("/ping")

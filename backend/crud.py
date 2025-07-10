@@ -165,3 +165,44 @@ def add_referral(db: Session, inviter_code: str, invited_tg_id: int) -> models.R
     inviter.balance += 1  # bonus point for inviter
     db.add(inviter)
     return ref
+
+# ---------------------------------------------------------------------------
+# Tournaments
+# ---------------------------------------------------------------------------
+
+
+def create_tournament(db: Session, name: str, prize_pool: float) -> models.Tournament:
+    t = models.Tournament(name=name, prize_pool=prize_pool)
+    db.add(t)
+    db.flush()
+    return t
+
+
+def join_tournament(db: Session, tournament: models.Tournament, user: models.User):
+    existing = (
+        db.query(models.TournamentParticipant)
+        .filter(
+            models.TournamentParticipant.tournament_id == tournament.id,
+            models.TournamentParticipant.user_id == user.id,
+        )
+        .first()
+    )
+    if existing:
+        return existing
+
+    p = models.TournamentParticipant(tournament_id=tournament.id, user_id=user.id)
+    db.add(p)
+    return p
+
+
+def draw_tournament_winners(db: Session, tournament: models.Tournament, winners_count: int = 3):
+    participants = [p.user_id for p in tournament.participants]
+    if not participants:
+        raise ValueError("No participants")
+
+    import random
+
+    winners_ids = random.sample(participants, min(len(participants), winners_count))
+    tournament.winners_json = {"winners": winners_ids}
+    db.add(tournament)
+    return winners_ids

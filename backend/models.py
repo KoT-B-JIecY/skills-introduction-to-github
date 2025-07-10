@@ -159,3 +159,20 @@ class Tournament(Base):
     prize_pool: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     winners_json: Mapped[dict | None] = mapped_column(JSON)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# ---------------------------------------------------------------------------
+# Tournament Participants
+# ---------------------------------------------------------------------------
+
+
+class TournamentParticipant(Base):
+    __tablename__ = "tournament_participants"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    tournament_id: Mapped[int] = mapped_column(ForeignKey("tournaments.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    tournament: Mapped["Tournament"] = relationship(backref="participants")
+    user: Mapped["User"] = relationship()
