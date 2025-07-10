@@ -2,8 +2,13 @@
 FROM composer:2 AS builder
 WORKDIR /var/www/html
 
-# Create new Laravel project (Laravel 11)
-RUN composer create-project --prefer-dist laravel/laravel laravel-app
+# Create base Laravel project
+RUN composer create-project --prefer-dist laravel/laravel laravel-app \
+    && cd laravel-app \
+    # Install Jetstream (includes Fortify + 2FA) \
+    && composer require laravel/jetstream --no-interaction --no-progress \
+    && php artisan jetstream:install livewire --no-interaction \
+    && php artisan key:generate --force
 
 # --- Runtime stage ---
 FROM php:8.2-apache
@@ -22,4 +27,4 @@ RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-avail
 
 # Expose port and start apache
 EXPOSE 80
-CMD ["apache2-foreground"]
+CMD ["bash", "-c", "php artisan migrate --force && apache2-foreground"]
